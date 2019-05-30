@@ -26,8 +26,8 @@
 ;; domination sense.
 (define (pebbleable? tree)
   (with-tree tree
-    (lambda (v) (> v 0))
-    (lambda (t l r)
+    (Leaf (v) (> v 0))
+    (Inner (t l r)
       (let ((to-l-top (muster l))
             (to-r-top (muster r)))
         (let ((over-l (/2 to-l-top))
@@ -41,8 +41,8 @@
 ;; tree.
 (define (muster tree)
   (with-tree tree
-    (lambda (v) v)
-    (lambda (t l r)
+    (Leaf (v) v)
+    (Inner (t l r)
       (+ t
          (/2 (muster l))
          (/2 (muster r))))))
@@ -52,8 +52,8 @@
 ;; the root of an existing tree.
 (define (add-to-root tree amt)
   (with-tree tree
-    (lambda (v) (Leaf (+ v amt)))
-    (lambda (t l r)
+    (Leaf (v) (Leaf (+ v amt)))
+    (Inner (t l r)
       (Inner (+ t amt) l r))))
 
 ;; Leaf : (a) -> Tree a
@@ -64,19 +64,27 @@
 ;; `Inner` constructs an interior vertex.
 (define (Inner top left right) (list top left right))
 
-;; with-tree : (Tree a, (a) -> b, (a, Tree a, Tree a) -> b) -> b
-;; `with-tree` is used to operate on trees in a convenient way; it accepts a
-;; tree and two functions. If the tree is a leaf, it applies the first function
-;; to the leaf's value; if it is an interior vertex, it applies the second
-;; function to the vertex's top, left subtree, and right subtree (in that
-;; order). Thus, the first function must take a single argument, and the second
-;; must take 3.
-(define (with-tree tree leaf-f inner-f)
-  (if (leaf? tree)
-    (leaf-f (leaf-value tree))
-    (inner-f (tree-top tree)
-             (tree-left tree)
-             (tree-right tree))))
+;; `with-tree` provides some additional syntax for working with binary trees.
+;; You provide a tree, an expression to be evaluated in the case that it is a
+;; leaf vertex, and an expression to be evaluated in the case that it is an
+;; interior vertex. Additionally, the value of the leaf vertex, and of the
+;; root vertex, left subtree, and right subtree, are bound to variables that
+;; you supply before the respective expressions. For instance,
+;;   (with-tree (Inner 3 (Leaf 0) (Leaf 1))
+;;     (Leaf (v)      `(a leaf whose value is ,v))
+;;     (Inner (t l r) `(an inner vertex whose left-subtree is ,l)))
+;;   => (an inner vertex whose left subtree is 0)
+(define-syntax with-tree
+  (syntax-rules (Leaf Inner)
+    ((with-tree tree
+       (Leaf (v) leaf-expr)
+       (Inner (t l r) inner-expr))
+     (if (leaf? tree)
+       ((lambda (v) leaf-expr) (leaf-value tree))
+       ((lambda (t l r) inner-expr)
+        (tree-top tree)
+        (tree-left tree)
+        (tree-right tree))))))
 
 (define leaf? number?)
 (define (leaf-value l) l)
