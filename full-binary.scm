@@ -15,11 +15,11 @@
 (define (perms depth amt)
   (if (zero? depth)
     (return (Leaf amt))
-    (>>= (range 0 amt)                           (lambda (top)
-     (>>= (range 0 (- amt top))                   (lambda (in-left)
-      (>>= (perms (- depth 1) in-left)             (lambda (left)
-       (>>= (perms (- depth 1) (- amt top in-left)) (lambda (right)
-        (return (Inner top left right))))))))))))
+    (list-comp (Inner top left right)
+      (<- top     (range 0 amt))
+      (<- in-left (range 0 (- amt top)))
+      (<- left    (perms (- depth 1) in-left))
+      (<- right   (perms (- depth 1) (- amt top in-left))))))
 
 ;; pebbles? : (Tree Nat) -> Bool
 ;; `pebbles?` determines whether its argument is pebbleable, in a pebbling
@@ -106,3 +106,17 @@
 ;; return : a -> [a]
 ;; `return` is the monadic "return"/"pure" operation for lists.
 (define (return n) (list n))
+
+;; `list-comp` provides some new syntax for rudimentary list-comprehensions,
+;; in the hope of cleaning expressions involving a lot of >>='s.
+;; For example,
+;;   (list-comp `(,x ,y) (<- x '(1 2 3)) (<- y '(a b)))
+;;   => '((1 a) (1 b) (2 a) (2 b) (3 a) (3 b))
+(define-syntax list-comp
+  (syntax-rules (<-)
+    ((_ expr) expr)
+    ((_ expr (<- x gen))
+     (>>= gen (lambda (x) (return expr))))
+    ((_ expr (<- x gen) (<- xs gens) ...)
+     (>>= gen (lambda (x)
+      (list-comp expr (<- xs gens) ...))))))
