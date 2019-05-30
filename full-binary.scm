@@ -7,7 +7,7 @@
 ;; `all-pebbleable` enumerates all (labeled) full binary trees of a given
 ;; depth that are pebbleable (see below).
 (define (all-pebbleable depth amt)
-  (filter pebbles? (perms depth amt)))
+  (filter pebbleable? (perms depth amt)))
 
 ;; perms : (Nat, Nat) -> [Tree]
 ;; `perms` generates all full binary trees of a certain depth with a given
@@ -21,10 +21,10 @@
       (<- left    (perms (- depth 1) in-left))
       (<- right   (perms (- depth 1) (- amt top in-left))))))
 
-;; pebbles? : (Tree Nat) -> Bool
-;; `pebbles?` determines whether its argument is pebbleable, in a pebbling
+;; pebbleable? : (Tree Nat) -> Bool
+;; `pebbleable?` determines whether its argument is pebbleable, in a pebbling
 ;; domination sense.
-(define (pebbles? tree)
+(define (pebbleable? tree)
   (with-tree tree
     (lambda (v) (> v 0))
     (lambda (t l r)
@@ -33,8 +33,8 @@
         (let ((over-l (/2 to-l-top))
               (over-r (/2 to-r-top)))
           (and (> (+ over-l over-r t) 0)
-               (pebbles? (add-to-root l (/2 (+ t over-r))))
-               (pebbles? (add-to-root r (/2 (+ t over-l))))))))))
+               (pebbleable? (add-to-root l (/2 (+ t over-r))))
+               (pebbleable? (add-to-root r (/2 (+ t over-l))))))))))
 
 ;; muster : (Tree Nat) -> Nat
 ;; `muster` determines how many pebbles can be transported to the root of a
