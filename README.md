@@ -24,3 +24,26 @@ For instance:
 ;;     (2 (1 0 0) (1 0 0))
 ;;     (4 (0 0 0) (0 0 0)))
 ```
+
+## symmetric/Symmetric.hs
+This program generates all *symmetric* binary trees that are pebbleable using a certain amount of material.
+As such, it runs much faster that the program above.
+The function `allValid` can be used to generate representations of these trees as follows:
+
+```haskell
+allValid 2 4
+-- => [[0,2,0],[2,1,0],[4,0,0]]
+```
+
+Each list represents a symmetric binary tree where the leftmost element is the amount of material located at the root of the tree, the next element is the amount located at each of the root's children, etc.
+
+The program can also be used as an executable as follows (suppose that it has been compiled to a binary called `pebsym`):
+
+```
+wjl$ ./pebsym 2 4
+Results (root marked by "r"):
+ r
+[0,2,0]
+[2,1,0]
+[4,0,0]
+```
