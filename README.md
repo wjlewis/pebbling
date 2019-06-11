@@ -3,7 +3,7 @@ Resources for T. Lewis' pebbling domination research.
 
 This repository contains a number of programs created to test various theories regarding the pebbling domination problem.
 
-## full-binary.scm
+## unrestricted/full-binary.scm
 
 This program allows one to generate all (labeled) full-binary trees of a given depth that are pebbleable using a given amount of pebbles.
 For instance, to enumerate all trees of depth 3 that are pebbleable using 7 pebbles, we evaluate:
