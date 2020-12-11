@@ -1,113 +1,106 @@
+use std::env;
 use std::fmt;
-use std::rc::Rc;
 
 fn main() {
-    let pebbleable = Tree::candidates(10, 687).filter(|tree| tree.is_valid());
-    println!("{:?}", pebbleable.collect::<Vec<Tree>>());
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 3 {
+        println!("Usage: fastpebsym <depth> <total-amt>");
+        std::process::exit(1);
+    }
+
+    let depth = args[1].parse::<u32>();
+    let height = args[2].parse::<u32>();
+
+    if depth.is_err() {
+        println!(
+            r#"Depth must be a positive integer (received "{}")"#,
+            args[1]
+        );
+    }
+    if height.is_err() {
+        println!(
+            r#"Height must be a positive integer (received "{}")"#,
+            args[2]
+        );
+    }
+
+    let pebbleable = Tree::candidates(depth.unwrap(), height.unwrap())
+        .filter(|tree| tree.is_pebbleable())
+        .collect::<Vec<Tree>>();
+
+    if pebbleable.len() == 0 {
+        println!("No pebbleable solutions");
+        return;
+    }
+
+    println!(" r");
+    for tree in pebbleable {
+        println!("{}", tree);
+    }
 }
 
 #[derive(Debug)]
-struct Tree(List<u32>);
+struct Tree(Vec<u32>);
 
 impl Tree {
     fn candidates(depth: u32, total: u32) -> Box<dyn Iterator<Item = Tree>> {
+        Tree::gen_candidates(depth, total, depth as usize)
+    }
+
+    fn gen_candidates(depth: u32, total: u32, tree_depth: usize) -> Box<dyn Iterator<Item = Tree>> {
         if depth == 0 {
-            Box::new(std::iter::once(Tree(List::from(total))))
+            let items = vec![0; tree_depth];
+            Box::new(std::iter::once(Tree(items)))
         } else {
-            Box::new(root_amts(total).flat_map(move |at_root| {
-                let residue = (total - at_root) / 2;
-                Tree::candidates(depth - 1, residue).map(move |candidate_tree| {
-                    let Tree(subtree) = candidate_tree;
-                    Tree(subtree.cons(at_root))
+            Box::new(root_amts(total).flat_map(move |root_amt| {
+                let residue = (total - root_amt) / 2;
+                Tree::gen_candidates(depth - 1, residue, tree_depth).map(move |mut subtree| {
+                    subtree.0[tree_depth - depth as usize] = root_amt;
+                    subtree
                 })
             }))
         }
     }
 
-    fn is_valid(&self) -> bool {
-        self.0.check_valid(0)
+    fn is_pebbleable(&self) -> bool {
+        let mut from_above = 0;
+
+        for (i, amt) in self.0.iter().enumerate() {
+            let rest = &self.0[i + 1..];
+            let from_below = muster(rest);
+            let total_at_node = amt + from_above / 2 + from_below / 2;
+
+            if total_at_node == 0 {
+                return false;
+            }
+
+            from_above = total_at_node;
+        }
+
+        true
     }
+}
+
+impl fmt::Display for Tree {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+fn muster(items: &[u32]) -> u32 {
+    let mut acc = 0;
+
+    for amt in items.iter().rev() {
+        acc = amt + 2 * (acc / 2);
+    }
+
+    acc
 }
 
 fn root_amts(total: u32) -> impl Iterator<Item = u32> {
     if total % 2 == 0 {
-        // We'd like to write this as an inclusive range, like
-        // `0..=total`, but `rev` requires a `DoubleEndedIterator`.
         (0..total + 1).rev().step_by(2)
     } else {
         (1..total + 1).rev().step_by(2)
-    }
-}
-
-impl List<u32> {
-    fn check_valid(&self, from_above: u32) -> bool {
-        self.items.check_valid(from_above)
-    }
-}
-
-impl ListItems<u32> {
-    fn muster(&self) -> u32 {
-        match self {
-            ListItems::Empty => 0,
-            ListItems::Cons(amt, rest) => amt + 2 * (rest.muster() / 2),
-        }
-    }
-
-    fn check_valid(&self, from_above: u32) -> bool {
-        match self {
-            ListItems::Empty => true,
-            ListItems::Cons(amt, rest) => {
-                let mustered = rest.muster();
-                let at_root = amt + mustered / 2 + from_above / 2;
-
-                at_root > 0 && rest.check_valid(at_root)
-            }
-        }
-    }
-}
-
-#[derive(Debug)]
-struct List<T> {
-    items: Rc<ListItems<T>>,
-}
-
-enum ListItems<T> {
-    Empty,
-    Cons(T, Rc<ListItems<T>>),
-}
-
-impl<T> List<T> {
-    fn empty() -> Self {
-        List {
-            items: Rc::new(ListItems::Empty),
-        }
-    }
-
-    fn cons(&self, item: T) -> List<T> {
-        List {
-            items: Rc::new(ListItems::Cons(item, Rc::clone(&self.items))),
-        }
-    }
-}
-
-impl<T> From<T> for List<T> {
-    fn from(item: T) -> List<T> {
-        List::empty().cons(item)
-    }
-}
-
-impl<T: fmt::Debug> fmt::Debug for ListItems<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "(")?;
-        let mut current = self;
-        while let ListItems::Cons(head, tail) = current {
-            write!(f, "{:?}", head)?;
-            if let ListItems::Cons(_, _) = **tail {
-                write!(f, " ")?;
-            }
-
-            current = tail;
-        }
-        write!(f, ")")
     }
 }
